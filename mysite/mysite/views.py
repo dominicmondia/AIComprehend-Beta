@@ -160,7 +160,6 @@ def get_all_users_history(request):
     return JsonResponse({'all_users_history': all_users_history})
     
 
-
 @staff_member_required
 def admin_dashboard(request):
     return render(request, 'admin_dashboard.html')

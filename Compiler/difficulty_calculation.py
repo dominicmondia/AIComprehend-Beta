@@ -2,14 +2,17 @@ import spacy
 import pandas as pd
 import json
 
+# Load NLP model (spacy)
 nlp = spacy.load("en_core_web_lg")
+
+# Load COCA dataset
 common_words = pd.read_csv('coca.csv')
 common_words_list = (common_words['lemma'][:2999]).str.lower().to_list()
 common_words_list = ' '.join(common_words_list)
 common_words_list = [x.text for x in nlp(common_words_list)]
 
-
-with open("aicomprehend_dataset_v26_cleaned.json", 'r') as f:
+# Load labelled dataset
+with open("aicomprehend_annotated_dataset_v6.json", 'r') as f:
     dataset_for_annotation = json.loads(f.read())
 
 
@@ -78,11 +81,13 @@ def dale_chall_readability_score(text):
     return raw_score
 
 
+# Normalize score
 def normalize_score(score, max_score, min_score):
     return (score - min_score) / (max_score - min_score) * (10 - min_score) + min_score
 
 
-def calculate_question_complexity(passage, question, question_type, choices, correct_answer, scaling=0.2):
+# Calculate question complexity
+def calculate_question_complexity(passage, question, question_type, choices, correct_answer, relevant_sentences, choices_in_complete_thought, scaling=0.2):
 
     passage_doc = nlp(passage)
     question_doc = nlp(question)
@@ -96,13 +101,26 @@ def calculate_question_complexity(passage, question, question_type, choices, cor
     shared_entities = len(set(passage_entities).intersection(question_entities))
     shared_noun_chunks = len(set(passage_noun_chunks).intersection(question_noun_chunks))
 
-    passage_similarity = question_doc.similarity(passage_doc)
-    correct_answer_doc = nlp(correct_answer)
-    correct_answer_similarity = correct_answer_doc.similarity(passage_doc)
+    relevant_sentences_str = " ".join(relevant_sentences)
+    relevant_sentences_doc = nlp(relevant_sentences_str)
+    choices_in_complete_thought = [nlp(sentence) for sentence in choices_in_complete_thought]
+
+    passage_similarity = question_doc.similarity(relevant_sentences_doc)
+
+    if correct_answer == 'A':
+        correct_answer = choices_in_complete_thought[0]
+    elif correct_answer == 'B':
+        correct_answer = choices_in_complete_thought[1]
+    elif correct_answer == 'C':
+        correct_answer = choices_in_complete_thought[2]
+    elif correct_answer == 'D':
+        correct_answer = choices_in_complete_thought[3]
+
+    correct_answer_doc = correct_answer
+    correct_answer_similarity = correct_answer_doc.similarity(relevant_sentences_doc)
     choices_similarity = 0
-    for choice in choices:
-        choice_doc = nlp(choice)
-        choices_similarity += choice_doc.similarity(passage_doc)
+    for choice in choices_in_complete_thought:
+        choices_similarity += choice.similarity(passage_doc)
     choices_similarity /= len(choices)
 
     dc_score = dale_chall_readability_score(passage)
@@ -130,18 +148,24 @@ def calculate_question_complexity(passage, question, question_type, choices, cor
         return dc_score, dc_score
 
 
+# Create an empty list to store the annotated dataset
 annotated_dataset = []
 
+# Annotate the dataset
 for data in dataset_for_annotation:
+    id = data['id']
     passage = data['passage']
     question = data['question']
     question_type = data['knowledge component']
     choices = data['choices']
     correct_answer = data['answer']
-    dc_score, difficulty_score = calculate_question_complexity(passage, question, question_type, choices, correct_answer)
-    annotated_dataset.append({'passage': passage, 'question': question, 'knowledge component': question_type, 'choices': choices,
-                              'answer': correct_answer, 'dc_score': dc_score, 'difficulty_score': difficulty_score})
+    relevant_sentences = data['relevant_sentences']
+    choices_in_complete_thought = data['choices_in_complete_thought']
 
-with open('annotated_dataset.json', 'w') as f:
+    dc_score, difficulty_score = calculate_question_complexity(passage, question, question_type, choices, correct_answer, relevant_sentences, choices_in_complete_thought)
+    annotated_dataset.append({'id': id, 'passage': passage, 'question': question, 'knowledge_component': question_type, 'choices': choices, 'answer': correct_answer, 'relevant_sentences': relevant_sentences, 'choices_in_complete_thought': choices_in_complete_thought, 'dc_score': dc_score, 'difficulty_score': difficulty_score})
+
+# Dump the dataset to a json file
+with open('aicomprehend_annotated_dataset_v7.json', 'w') as f:
     json.dump(annotated_dataset, f, indent=4)
 

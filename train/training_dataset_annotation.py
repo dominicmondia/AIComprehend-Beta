@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import os
 import json
-from pprint import pprint
 
 csv_file = "combined_data.csv"
 # Phase 1 Compilation
@@ -47,8 +46,8 @@ for filename in os.listdir(excel_dir):
         # Replace the zeros with the appropriate knowledge component
         df['Knowledge Components'] = df['Knowledge Components'].apply(lambda x: [0, 0, 0]).astype('object')
         df['Knowledge Components'] = np.where(df['Knowledge Component'] == 'literal', df['Knowledge Components'].apply(lambda x: [1, 0, 0]), df['Knowledge Components'])
-        df['Knowledge Components'] = np.where(df['Knowledge Component'] == 'inferential', df['Knowledge Components'].apply(lambda x: [1, 1, 0]), df['Knowledge Components'])
-        df['Knowledge Components'] = np.where(df['Knowledge Component'] == 'critical', df['Knowledge Components'].apply(lambda x: [1, 1, 1]), df['Knowledge Components'])
+        df['Knowledge Components'] = np.where(df['Knowledge Component'] == 'inferential', df['Knowledge Components'].apply(lambda x: [0, 1, 0]), df['Knowledge Components'])
+        df['Knowledge Components'] = np.where(df['Knowledge Component'] == 'critical', df['Knowledge Components'].apply(lambda x: [0, 0, 1]), df['Knowledge Components'])
         # initialize number correct and incorrect columns
         df['literal_number_correct'] = 0
         df['literal_number_incorrect'] = 0

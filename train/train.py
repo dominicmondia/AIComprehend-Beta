@@ -102,6 +102,6 @@ optimal_parameters = literal_optimal_parameters.x + inferential_optimal_paramete
 print(precision1(optimal_parameters, test_data))
 
 # Save the parameters to a file
-with open('parameters.txt', 'w') as f:
+with open('parameters_v2.txt', 'w') as f:
     f.write(str(optimal_parameters))
 

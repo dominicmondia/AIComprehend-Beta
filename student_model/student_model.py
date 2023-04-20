@@ -6,7 +6,7 @@ with open('EEE-196/train/parameters.txt') as file:
     DEFAULT_PARAMETERS = file.read().replace('[', '').replace(']', '').replace('\n', ', ').replace(' ', '').split(',')
     DEFAULT_PARAMETERS = [float(i) for i in DEFAULT_PARAMETERS]
 
-with open('EEE-196/Compiler/pretest_dataset_v4.json') as file:
+with open('EEE-196/Compiler/aicomprehend_annotated_dataset_v7.json') as file:
     MASTER_DATA = json.load(file)
 
 
@@ -65,16 +65,10 @@ class StudentModel:
         correct_pred_average = (correct_pred_literal + correct_pred_inferential + correct_pred_critical) / 3
         incorrect_pred_average = (incorrect_pred_literal + incorrect_pred_inferential + incorrect_pred_critical) / 3
 
-        print(correct_pred_literal, correct_pred_inferential, correct_pred_critical)
-        print(incorrect_pred_literal, incorrect_pred_inferential, incorrect_pred_critical)
-        print(correct_pred_average, incorrect_pred_average)
-
         # calculate the expected value of each knowledge component
         expected_value_literal = correct_pred_literal * correct_pred_average + incorrect_pred_literal * incorrect_pred_average
         expected_value_inferential = correct_pred_inferential * correct_pred_average + incorrect_pred_inferential * incorrect_pred_average
         expected_value_critical = correct_pred_critical * correct_pred_average + incorrect_pred_critical * incorrect_pred_average
-
-        print(expected_value_literal, expected_value_inferential, expected_value_critical)
 
         if max(expected_value_literal, expected_value_inferential, expected_value_critical) == expected_value_literal:
             next_knowledge_component = 'literal'
@@ -88,4 +82,4 @@ class StudentModel:
         next_question_id = choice([MASTER_DATA[i] for i in range(1, len(MASTER_DATA)) if
                                    MASTER_DATA[i]["knowledge_component"] == next_knowledge_component])
 
-        return next_question_id
+        return next_question_id['id']

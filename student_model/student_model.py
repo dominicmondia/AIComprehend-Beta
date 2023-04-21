@@ -35,12 +35,9 @@ class StudentModel:
         beta_literal, gamma_literal, rho_literal, beta_inferential, gamma_inferential, rho_inferential, beta_critical, gamma_critical, rho_critical = self.student_parameters
 
         # Calculate the student's probability of answering each knowledge component correctly
-        m_literal = beta_literal + gamma_literal * self.correct_responses['literal'] \
-                    + rho_literal * self.incorrect_responses['literal']
-        m_inferential = beta_inferential + gamma_inferential * self.correct_responses['inferential'] \
-                        + rho_inferential * self.incorrect_responses['inferential'] + m_literal
-        m_critical = beta_critical + gamma_critical * self.correct_responses['critical'] \
-                     + rho_critical * self.incorrect_responses['critical'] + m_inferential + m_literal
+        m_literal = beta_literal + gamma_literal * self.correct_responses['literal'] + rho_literal * self.incorrect_responses['literal']
+        m_inferential = beta_inferential + gamma_inferential * self.correct_responses['inferential'] + rho_inferential * self.incorrect_responses['inferential']
+        m_critical = beta_critical + gamma_critical * self.correct_responses['critical'] + rho_critical * self.incorrect_responses['critical']
 
         # Return the student's probability of answering each knowledge component correctly
         self.pred_literal = expit(m_literal)
@@ -65,10 +62,16 @@ class StudentModel:
         correct_pred_average = (correct_pred_literal + correct_pred_inferential + correct_pred_critical) / 3
         incorrect_pred_average = (incorrect_pred_literal + incorrect_pred_inferential + incorrect_pred_critical) / 3
 
+        # print(correct_pred_literal, correct_pred_inferential, correct_pred_critical)
+        # print(incorrect_pred_literal, incorrect_pred_inferential, incorrect_pred_critical)
+        # print(correct_pred_average, incorrect_pred_average)
+
         # calculate the expected value of each knowledge component
         expected_value_literal = correct_pred_literal * correct_pred_average + incorrect_pred_literal * incorrect_pred_average
         expected_value_inferential = correct_pred_inferential * correct_pred_average + incorrect_pred_inferential * incorrect_pred_average
         expected_value_critical = correct_pred_critical * correct_pred_average + incorrect_pred_critical * incorrect_pred_average
+
+        # print(expected_value_literal, expected_value_inferential, expected_value_critical)
 
         if max(expected_value_literal, expected_value_inferential, expected_value_critical) == expected_value_literal:
             next_knowledge_component = 'literal'

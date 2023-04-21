@@ -45,13 +45,13 @@ def loglik(params, data):
 # Optimize the beta gamma and rho parameters for each knowledge component using the train data
 bounds = ((-10, 0), (0, 10), (-10, 10))
 # Literal parameters
-literal_data = train_data
+literal_data = train_data[train_data['Knowledge Component'] == 'literal']
 literal_optimal_parameters = minimize(loglik, [0, 0, 0], args=(literal_data), method='L-BFGS-B', bounds=bounds)
 beta_literal, gamma_literal, rho_literal = literal_optimal_parameters.x
 print(literal_optimal_parameters.x)
 
 # Inferential parameters
-inferential_data = train_data[train_data['Knowledge Component'] != 'inferential']
+inferential_data = train_data[train_data['Knowledge Component'] == 'inferential']
 inferential_optimal_parameters = minimize(loglik, [0, 0, 0], args=(inferential_data), method='L-BFGS-B', bounds=bounds)
 beta_inferential, gamma_inferential, rho_inferential = inferential_optimal_parameters.x
 print(inferential_optimal_parameters.x)
@@ -80,12 +80,9 @@ def precision1(params, data):
         if datapoint['Knowledge Component'] == 'literal':
             m = beta_literal + gamma_literal * s_literal + rho_literal * f_literal
         elif datapoint['Knowledge Component'] == 'inferential':
-            m = beta_inferential + gamma_inferential * s_inferential + rho_inferential * f_inferential \
-                + beta_literal + gamma_literal * s_literal + rho_literal * f_literal
+            m = beta_inferential + gamma_inferential * s_inferential + rho_inferential * f_inferential
         elif datapoint['Knowledge Component'] == 'critical':
-            m = beta_critical + gamma_critical * s_critical + rho_critical * f_critical \
-                + beta_literal + gamma_literal * s_literal + rho_literal * f_literal \
-                + beta_inferential + gamma_inferential * s_inferential + rho_inferential * f_inferential
+            m = beta_critical + gamma_critical * s_critical + rho_critical * f_critical
 
         pred = expit(m)
 
@@ -98,10 +95,10 @@ def precision1(params, data):
 
 
 # Calculate the precision of the model using the test data
-optimal_parameters = literal_optimal_parameters.x + inferential_optimal_parameters.x + critical_optimal_parameters.x
+optimal_parameters = [-0.21511034, 0.48704398, -1.03234507, -0.62694264, 0.39838356, 0.01086545, -1.35502912, 0.014411, 0.13719109]
 print(precision1(optimal_parameters, test_data))
 
 # Save the parameters to a file
-with open('parameters_v2.txt', 'w') as f:
+with open('parameters.txt', 'w') as f:
     f.write(str(optimal_parameters))
 

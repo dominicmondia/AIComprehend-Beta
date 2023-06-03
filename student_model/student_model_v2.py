@@ -1,6 +1,6 @@
 import json
 from scipy.special import expit
-from random import sample, shuffle
+from random import sample, shuffle, choice
 from statistics import mean
 import numpy as np
 import pandas as pd
@@ -91,9 +91,10 @@ class StudentModel:
         prediction = {'literal': np.clip(p_literal, 0.01, 0.99), 'inferential': np.clip(p_inferential, 0.01, 0.99),
                       'critical': np.clip(p_critical, 0.01, 0.99)}
 
-        self.mastered_components = [i for i in prediction if prediction[i] > 0.8 and i not in self.mastered_components]
-        self.inappropriate_components = [i for i in prediction if prediction[
-            i] < 0.2 and i != 'literal' and i not in self.inappropriate_components and i not in self.mastered_components]
+        self.mastered_components = [i for i in prediction if
+                                    (prediction[i] > 0.8 and i not in self.mastered_components) or i in self.mastered_components]
+        self.inappropriate_components = [i for i in prediction if
+                                         (prediction[i] < 0.2 and i != 'literal' or i in self.inappropriate_components) and i not in self.mastered_components]
 
         return prediction
 
@@ -122,9 +123,10 @@ class StudentModel:
                       'inferential': np.clip(log_res.predict_proba(inferential_data)[0][1], 0.01, 0.99),
                       'critical': np.clip(log_res.predict_proba(critical_data)[0][1], 0.01, 0.99)}
 
-        self.mastered_components = [i for i in prediction if prediction[i] > 0.8 and i not in self.mastered_components]
-        self.inappropriate_components = [i for i in prediction if prediction[
-            i] < 0.2 and i != 'literal' and i not in self.inappropriate_components and i not in self.mastered_components]
+        self.mastered_components = [i for i in prediction if
+                                    (prediction[i] > 0.8 and i not in self.mastered_components) or i in self.mastered_components]
+        self.inappropriate_components = [i for i in prediction if
+                                         (prediction[i] < 0.2 and i != 'literal' or i in self.inappropriate_components) and i not in self.mastered_components]
 
         return prediction
 
@@ -133,39 +135,47 @@ class StudentModel:
         if len(self.recent_history) == 0:
             self.in_diagnostic = True
 
+        if self.model == '1':
+            prediction = self.pfa_model()
+        elif self.model == '2':
+            prediction = self.log_res_vanilla()
+
+        if len(self.mastered_components) == 3:
+            self.in_diagnostic = True
+
         if self.in_diagnostic and len(self.recent_history) == 9:
             self.in_diagnostic = False
-            next_question_id = self.diagnostic_ids[len(self.diagnostic_ids)]
+            next_question_id = self.diagnostic_ids[len(self.recent_history - 1)]
             shuffle(self.diagnostic_ids)
         elif self.in_diagnostic and len([i for i in self.student_history if i['question_id'] in self.diagnostic_ids]) == 18:
             self.in_diagnostic = False
             self.in_review = True
             self.remaining_question_ids = [i['id'] for i in MASTER_DATA]
-            next_question_id = sample(self.remaining_question_ids, 1)
+            next_question_id = self.remaining_question_ids.pop(choice(self.remaining_question_ids))
         elif self.in_diagnostic and len(self.mastered_components) == 3:
-            next_question_id = self.diagnostic_ids[len(self.recent_history)]
+            next_question_id = self.diagnostic_ids[[i for i in self.student_history[9:] if i['question_id'] in self.diagnostic_ids]]
         elif self.in_diagnostic:
             next_question_id = self.diagnostic_ids[len(self.recent_history)]
         elif self.in_review:
-            next_question_id = sample(self.remaining_question_ids, 1)
+            next_question_id = self.remaining_question_ids.pop(choice(self.remaining_question_ids))
         else:
-            if self.model == '1':
-                prediction = self.pfa_model()
-            else:
-                prediction = self.log_res_vanilla()
-
             expectation = {}
             for i in prediction:
                 expectation[i] = prediction[i] * mean(prediction.values()) + (1 - prediction[i]) * (
                         1 - mean(prediction.values()))
 
             # remove mastered components and inappropriate components from expectation
-            expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components and i not in self.inappropriate_components}
+            if len(np.setdiff1d(self.inappropriate_components - self.mastered_components)):
+                expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components and i not in self.inappropriate_components}
+            else:
+                expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components}
 
             next_question_kc = max(expectation, key=expectation.get)
 
             # get a random question id from the remaining questions ids
-            next_question_id = sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == next_question_kc] and i['id'] not in self.remaining_question_ids, 1)
+            next_question_id = choice(
+                [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc])
+            self.remaining_question_ids.remove(next_question_id)
 
         return next_question_id, self.mastered_components, self.remaining_question_ids, self.diagnostic_ids, \
                self.inappropriate_components, self.model, self.in_review, self.in_diagnostic

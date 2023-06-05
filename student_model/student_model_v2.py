@@ -177,5 +177,5 @@ class StudentModel:
                 [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc])
             self.remaining_question_ids.remove(next_question_id)
 
-        return next_question_id, self.mastered_components, self.remaining_question_ids, self.diagnostic_ids, \
-               self.inappropriate_components, self.model, self.in_review, self.in_diagnostic
+        return next_question_id, self.student_parameters, self.remaining_question_ids, self.diagnostic_ids, self.mastered_components,\
+               self.inappropriate_components, self.model, self.in_diagnostic, self.in_review
